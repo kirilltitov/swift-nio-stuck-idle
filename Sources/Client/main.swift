@@ -3,6 +3,10 @@ import Foundation
 
 typealias Bytes = [UInt8]
 
+enum E: Error {
+    case Noes
+}
+
 final class Handler: ChannelDuplexHandler {
     typealias InboundIn = ByteBuffer
     typealias InboundOut = ByteBuffer
@@ -15,10 +19,12 @@ final class Handler: ChannelDuplexHandler {
         self.promise = promise
     }
     
-    func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
-        if let _ = event as? IdleStateHandler.IdleStateEvent {
+    public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        print("EVENT!")
+        if event is IdleStateHandler.IdleStateEvent {
             print("Client timed out")
             ctx.close(promise: nil)
+            self.promise.fail(error: E.Noes)
         }
         ctx.fireUserInboundEventTriggered(event)
     }
@@ -49,7 +55,7 @@ let promise: EventLoopPromise<Void> = group.next().newPromise()
 let bootstrap = ClientBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.add(handler: IdleStateHandler(readTimeout: .seconds(1), writeTimeout: .seconds(1))).then {
+        channel.pipeline.add(handler: IdleStateHandler(readTimeout: .seconds(1), writeTimeout: .seconds(1), allTimeout: .seconds(1))).then {
         channel.pipeline.add(handler: Handler(promise: promise))
     }}
 
