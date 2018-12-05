@@ -15,6 +15,14 @@ final class Handler: ChannelDuplexHandler {
         self.promise = promise
     }
     
+    func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        if let _ = event as? IdleStateHandler.IdleStateEvent {
+            print("Client timed out")
+            ctx.close(promise: nil)
+        }
+        ctx.fireUserInboundEventTriggered(event)
+    }
+    
     func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let string = self.unwrapOutboundIn(data)
         let stringBytes = Bytes(string.utf8)
